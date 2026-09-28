@@ -1,0 +1,36 @@
+{
+  "auto_save": {
+    "description": "把运行记录持久化到插件数据目录（重启后仍可查看历史）",
+    "type": "bool",
+    "default": true
+  },
+  "max_history": {
+    "description": "最多保留的运行记录数，超出后淘汰最早的已结束记录",
+    "type": "int",
+    "default": 300,
+    "options": [50, 100, 300, 1000]
+  },
+  "max_turns_per_agent": {
+    "description": "每个子代理最多保留的对话条数",
+    "type": "int",
+    "default": 400,
+    "options": [100, 400, 1000]
+  },
+  "max_turn_chars": {
+    "description": "单条对话（工具参数/返回值）保留的字符数，超出部分会在面板上标记为已截断",
+    "type": "int",
+    "default": 4000,
+    "options": [1000, 4000, 20000]
+  },
+  "stale_run_seconds": {
+    "description": "运行中超过该秒数没有任何更新则标记为已中断（0 = 关闭该检测）",
+    "type": "int",
+    "default": 900,
+    "options": [0, 300, 900, 3600]
+  },
+  "demo_on_start": {
+    "description": "启动时载入演示数据，用于在没有真实运行时查看界面效果",
+    "type": "bool",
+    "default": false
+  }
+}
