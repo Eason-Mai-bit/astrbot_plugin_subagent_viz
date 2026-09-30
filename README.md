@@ -25,7 +25,7 @@
 ### 方式一：WebUI 安装（推荐）
 
 1. AstrBot 面板 → **插件管理**
-2. 从插件市场搜索 `subagent-viz`
+2. 从插件市场搜索 `subagent_viz`
 3. 点击安装
 
 ### 方式二：手动安装
@@ -40,13 +40,13 @@ git clone https://github.com/Eason-Mai-bit/astrbot_plugin_subagent_viz.git
 
 ### 方式三：离线安装
 
-下载 Release 中的 `subagent-viz-0.2.0.zip`，解压到 `<AstrBot>/data/plugins/subagent-viz/`。
+下载 Release 中的 `subagent-viz-0.2.1.zip`，解压到 `<AstrBot>/data/plugins/astrbot_plugin_subagent_viz/`。
 
 ---
 
 ## ⚙️ 配置
 
-在 AstrBot WebUI → **插件管理** → `subagent-viz` → 配置：
+在 AstrBot WebUI → **插件管理** → `subagent_viz` → 配置：
 
 | 字段 | 说明 | 默认 |
 |:---|:---|:---:|
