@@ -47,7 +47,26 @@ try:  # AstrBot internals; absent only if the core layout ever changes.
 except Exception:  # pragma: no cover - duck typing keeps the hooks working anyway
     _BaseAgentRunHooks = object  # type: ignore[assignment,misc]
 
-PLUGIN_NAME = "subagent-viz"
+# Must equal metadata.yaml's `name` (and the plugin directory name).
+#
+# The dashboard never builds the API path itself: the host webui constructs
+# `/api/v1/plugins/extensions/{plugin_name}/{endpoint}` from the registered
+# plugin name, and the backend matches that path against our registered routes
+# with re.fullmatch (dashboard/api/plugins.py). A hyphen here while metadata
+# uses an underscore makes every route unmatchable ("未找到该路由").
+# The same string is also the config-file stem (data/config/{PLUGIN_NAME}_config.json),
+# so it must stay in lockstep with metadata.yaml too.
+PLUGIN_NAME = "subagent_viz"
+
+# Keys declared in _conf_schema.json; anything else in the config file is ignored.
+_CONFIG_KEYS = (
+    "max_history",
+    "max_turns_per_agent",
+    "max_turn_chars",
+    "stale_run_seconds",
+    "auto_save",
+    "demo_on_start",
+)
 
 # Limits. Overwritten from the plugin config during initialize(); kept as module
 # globals because _clip() is a module-level helper.
@@ -363,8 +382,12 @@ class CaptureHooks(_BaseAgentRunHooks):
 
 
 class SubagentVizPlugin(Star):
-    def __init__(self, context: Context):
+    def __init__(self, context: Context, config: Any = None):
+        # The host injects the schema-validated AstrBotConfig here
+        # (star_manager.py instantiates with config=plugin_config). Accepting it
+        # also avoids the TypeError fallback path in the loader.
         super().__init__(context)
+        self.config = config
         self._agents: dict[str, SubagentProgress] = {}
         self._tasks: dict[str, asyncio.Task] = {}
         self._main_tasks: set[asyncio.Task] = set()
@@ -411,13 +434,35 @@ class SubagentVizPlugin(Star):
     def _apply_config(self) -> None:
         """Honour _conf_schema.json, falling back to the module defaults."""
         global MAX_AGENTS, MAX_TURNS_PER_AGENT, MAX_TURN_CHARS, STALE_RUN_SECONDS
+        raw = {}
+        # Prefer the AstrBotConfig the host injects from
+        # data/config/{dir_name}_config.json. The legacy astrbot.core.star.config
+        # .load_config() helper is NOT usable here: it looks for "{name}.json"
+        # (no _config suffix) and expects a nested {key: {"value": ...}} shape,
+        # so it always returned False and every setting silently fell back to
+        # its default.
         try:
-            from astrbot.core.star.config import load_config
-
-            raw = load_config(PLUGIN_NAME) or {}
+            injected = getattr(self, "config", None)
+            if injected is not None:
+                raw = {k: injected.get(k) for k in _CONFIG_KEYS if k in injected}
         except Exception as exc:
-            logger.debug("[subagent-viz] config unavailable, using defaults: %s", exc)
-            raw = {}
+            logger.debug("[subagent-viz] injected config unusable: %s", exc)
+
+        if not raw:
+            # Last resort: read the host-managed config file directly, in the
+            # flat shape it is actually stored in.
+            try:
+                from astrbot.core.utils.astrbot_path import get_astrbot_data_path
+
+                cfg = Path(get_astrbot_data_path()) / "config" / f"{PLUGIN_NAME}_config.json"
+                if cfg.is_file():
+                    raw = {
+                        k: v
+                        for k, v in (json.loads(cfg.read_text(encoding="utf-8-sig")) or {}).items()
+                        if k in _CONFIG_KEYS
+                    }
+            except Exception as exc:
+                logger.debug("[subagent-viz] config file unavailable: %s", exc)
 
         def as_int(key: str, fallback: int, minimum: int = 0) -> int:
             try:
@@ -469,6 +514,9 @@ class SubagentVizPlugin(Star):
             base = Path(get_astrbot_data_path())
         except Exception:
             base = Path(__file__).resolve().parent
+        # Deliberately NOT PLUGIN_NAME: this on-disk path predates the rename
+        # to subagent_viz and already holds captured run history, so it stays
+        # frozen to avoid orphaning existing data.
         return base / "plugin_data" / "subagent-viz" / "runs.json"
 
     # ── patching ────────────────────────────────────────────────────────
@@ -1102,11 +1150,12 @@ class SubagentVizPlugin(Star):
     # ── API ─────────────────────────────────────────────────────────────
 
     def _register_apis(self) -> None:
-        # Routes are matched with re.fullmatch against the FULL path the
-        # dashboard builds, which already contains the plugin name
-        # (dashboard/api/plugins.py :: _call_plugin_extension passes plugin_path
-        # straight to _match_registered_web_api). The page still calls
-        # apiGet("agents") - the dashboard prepends "/api/plug/subagent-viz/".
+        # Routes are matched with re.fullmatch against the FULL path the host
+        # builds, which already contains the plugin name: the webui prefixes
+        # "/api/v1/plugins/extensions/{plugin_name}/" to the bare endpoint and
+        # dashboard/api/plugins.py passes plugin_path straight to
+        # _match_registered_web_api. The page still calls apiGet("agents") - it
+        # never names the plugin itself. So PLUGIN_NAME must match metadata.yaml.
         reg = self.context.register_web_api
         reg(f"/{PLUGIN_NAME}/agents", self._api_agents, ["GET"], "Snapshot of all sub-agents")
         reg(f"/{PLUGIN_NAME}/events", self._api_events, ["GET"], "Long-poll for sub-agent changes")
