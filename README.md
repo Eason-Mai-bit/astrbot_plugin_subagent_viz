@@ -40,7 +40,7 @@ git clone https://github.com/Eason-Mai-bit/astrbot_plugin_subagent_viz.git
 
 ### 方式三：离线安装
 
-下载 Release 中的 `subagent-viz-0.2.1.zip`，解压到 `<AstrBot>/data/plugins/astrbot_plugin_subagent_viz/`。
+下载 Release 中的 `subagent-viz-0.2.3.zip`，解压到 `<AstrBot>/data/plugins/astrbot_plugin_subagent_viz/`。
 
 ---
 

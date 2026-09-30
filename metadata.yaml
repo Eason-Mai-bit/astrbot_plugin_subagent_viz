@@ -2,7 +2,7 @@ name: subagent_viz
 display_name: Sub-Agent Visualization
 author: Eason-Mai-bit
 description: Hermes-style sub-agent visualization dashboard for AstrBot. Live Gantt timeline, nested agent tree and full per-agent conversation (tool calls, results, reasoning).
-version: 0.2.2
+version: 0.2.3
 astrbot_version: ">=0.1.0"
 support_platforms: []
 repo: https://github.com/Eason-Mai-bit/astrbot_plugin_subagent_viz
